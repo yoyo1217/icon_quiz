@@ -3,22 +3,20 @@ import SVGIcon from './SVGIcon'
 import Options from './Options'
 
 
-export default function Question({ question, options,dispatch }) {
+export default function Question({ question, options, correctOption, dispatch, answer }) {
   useEffect(() => {
     dispatch({ type: 'PICK_QUESTION_ICON' })
     dispatch({ type: 'GET_OPTIONS' })
-  }, [])
+  }, [dispatch])
 
-  // useEffect(() => {
-  //   console.log("question", question);
-  //   console.log(options);
-  // }, [question, options])
+  useEffect(() => {
+    console.log(question);
+  })
 
   return (
-    // <div className='question-container'>
     <div>
       {question && <SVGIcon svg={question.svg} className="largeIcon" />}
-      <Options options={options} />
+      <Options options={options} correctOption={correctOption} dispatch={dispatch} answer={answer}/>
     </div>
   )
 }

@@ -5,13 +5,22 @@ import Header from "./Header";
 import StartScreen from "./StartScreen";
 import Question from "./Question";
 import Main from "./Main";
+import NextButton from "./NextButton";
+import Point from "./Point";
+import NumberQuestions from "./NumberQuestions";
+import FinishScreen from "./FinishScreen";
 
 
 const initialState = {
   uniqueIconsArray: [],
   questionIcon: null,
   options: [],
-  // loading, error, ready, active, finished
+  correctOption: "",
+  answer: null,
+  points: 0,
+  numQuestions: 10,
+  questionCnt: 1,
+  // error, ready, active, finish
   status: 'ready'
 }
 
@@ -23,7 +32,8 @@ function reducer(state, action){
       const randomIcon = getRandomIcon(state.uniqueIconsArray)
       return { 
         ...state, 
-        questionIcon: randomIcon
+        questionIcon: randomIcon,
+        correctOption: randomIcon.title,
       }
     case 'GET_OPTIONS':
       const options = getOptions(state.uniqueIconsArray, state.questionIcon)
@@ -31,13 +41,44 @@ function reducer(state, action){
         ...state,
         options,
       }
-
-    case 'start':
-      return {...state, status: 'active'}
-    case 'quizSet':
+    case 'SET_NEW_ANSWER':
+      return {...state, answer: action.payload,
+        points:
+          action.payload === state.correctOption
+            ? state.points + 10
+            : state.points
+      }
+    case 'NEXT_QUESTION':
+      const nextRandomIcon = getRandomIcon(state.uniqueIconsArray)
+      const nextOptions = getOptions(state.uniqueIconsArray, nextRandomIcon)
       return {
         ...state,
-
+        questionIcon: nextRandomIcon,
+        correctOption: nextRandomIcon.title,
+        options: nextOptions,
+        answer: null,
+        questionCnt: state.questionCnt + 1
+      }
+    case 'start':
+      return {
+        ...state, 
+        status: 'active',
+      }
+    case 'FINISH':
+      return {
+        ...state,
+        status: 'finish',
+        questionIcon: null,
+        options: [],
+        correctOption: "",
+        answer: null,
+        questionCnt: 1,
+      }
+    case 'RESTART':
+      return {
+        ...state,
+        points: 0,
+        status: 'active'
       }
       default:
         throw new Error('Action unknown')
@@ -59,13 +100,25 @@ function getOptions(iconArray, questionIcon){
     options.push(optionsArray[getRandomNumber(0, optionsArray.length)])
   }
   options.push(questionIcon)
-  return options
+  const shuffledArray = shuffle(options)
+  return shuffledArray
+}
+
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    let j = Math.floor(Math.random() * (i + 1))
+    let tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
+  }
+  return arr
 }
 
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, initialState)
-  const numQuestions = state.uniqueIconsArray.length
+  const [{status, uniqueIconsArray, questionIcon, options, correctOption, answer, questionCnt, points, numQuestions, }, dispatch] = useReducer(reducer, initialState)
+  const numIcons = uniqueIconsArray.length
+  const maxPossiblePoints = numQuestions * 10
   useEffect(() => {
     const iconsArray = Object.values(icons)
     const titles = iconsArray.map(icon => icon.title);
@@ -86,8 +139,34 @@ function App() {
     <div className="app">
       <Header />
       <Main>
-        {state.status === 'ready' && <StartScreen numQuestions={numQuestions} dispatch={dispatch}/>}
-        {state.status === 'active' && <Question question={state.questionIcon} options={state.options} dispatch={dispatch}/>}
+        {status === 'ready' && <StartScreen numIcons={numIcons} dispatch={dispatch}/>}
+        {status === 'active' && (
+          <>
+          <Question 
+            question={questionIcon} 
+            options={options} 
+            correctOption={correctOption} 
+            dispatch={dispatch} answer={answer}
+          />
+            <NextButton 
+              dispatch={dispatch} 
+              answer={answer}
+              questionCnt={questionCnt}
+            />
+            <Point points={points}/>
+            <NumberQuestions 
+              numQuestions={numQuestions}
+              questionCnt={questionCnt}
+            />
+          </>
+        )}
+        {status === 'finish' && 
+          <FinishScreen 
+            points={points} 
+            maxPossiblePoints={maxPossiblePoints}
+            dispatch={dispatch}
+          />
+        }
       </Main>
     </div>
   );
